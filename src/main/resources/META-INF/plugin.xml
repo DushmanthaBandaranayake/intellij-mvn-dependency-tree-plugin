@@ -1,0 +1,32 @@
+<idea-plugin>
+    <id>com.dush.deptree</id>
+    <name>Maven Dependency Tree Graph</name>
+    <vendor email="dushmanthab99@gmail.com">Dushmantha Bandaranayake</vendor>
+    <description>Right-click a pom.xml and choose "Dependency Tree" to see a collapsible graphical
+        dependency tree. Click a node to jump to its declaration in the POM.
+        Free to use under the MIT License. Copyright (c) 2026 Dushmantha Bandaranayake.</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.idea.maven</depends>
+    <depends>org.jetbrains.idea.reposearch</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="Dependency Tree" displayType="BALLOON"/>
+        <toolWindow id="Dependency Tree"
+                    anchor="bottom"
+                    canCloseContents="true"
+                    icon="/icons/depTreeToolWindow.svg"
+                    factoryClass="com.dush.deptree.DepTreeToolWindowFactory"/>
+    </extensions>
+
+    <actions>
+        <action id="DepTree.Show"
+                class="com.dush.deptree.ShowDependencyTreeAction"
+                text="Dependency Tree"
+                description="Show the Maven dependency tree as a graph"
+                icon="/icons/depTree.svg">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>

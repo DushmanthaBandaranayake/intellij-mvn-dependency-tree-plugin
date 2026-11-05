@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --bg:#ffffff; --fg:#222; --link:#b8b8b8; --node:#f2f4f7; --stroke:#8a94a3; --bar:#eee; }
+  :root.dark { --bg:#2b2d30; --fg:#dfe1e5; --link:#555a60; --node:#393b40; --stroke:#6f737a; --bar:#1e1f22; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+               font:12px -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  #bar { height:30px; display:flex; align-items:center; gap:8px; padding:0 8px; background:var(--bar); }
+  #bar button { font:inherit; color:inherit; background:var(--node); border:1px solid var(--stroke);
+                border-radius:4px; padding:3px 5px; cursor:pointer; display:inline-flex; position:relative; }
+  #bar button svg { width:14px; height:14px; cursor:inherit; fill:none; stroke:currentColor; stroke-width:1.5;
+                    stroke-linecap:round; stroke-linejoin:round; }
+  /* CSS tooltip: native title tooltips are not reliable in every JCEF rendering mode */
+  #bar button:hover::after { content:attr(data-tip); position:absolute; top:calc(100% + 4px); left:0; z-index:10;
+                             padding:2px 6px; border:1px solid var(--stroke); border-radius:4px; white-space:nowrap;
+                             background:var(--bar); color:var(--fg); pointer-events:none; }
+  #count { opacity:.75; }
+  #bar input { font:inherit; color:inherit; background:var(--node); border:1px solid var(--stroke);
+               border-radius:4px; padding:2px 6px; width:180px; }
+  .legend span { margin-left:10px; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  svg { width:100%; height:calc(100% - 30px); cursor:grab; }
+  svg.drag { cursor:grabbing; }
+  .link { fill:none; stroke:var(--link); stroke-width:1.2; }
+  .node rect { fill:var(--node); stroke:var(--stroke); stroke-width:1.2; rx:5; }
+  .node { cursor:pointer; }
+  .node:hover rect { stroke-width:2.2; }
+  .node text { fill:var(--fg); pointer-events:none; }
+  /* !important: scope/conflict colours set the border inline, and a match must win over them */
+  .node.match .box { fill:#ffd866; stroke:#f5a623 !important; stroke-width:2.6; }
+  .node.match > text { fill:#222; }
+  .toggle circle { fill:var(--bg); stroke:var(--stroke); }
+  .toggle text { fill:var(--fg); font-weight:bold; text-anchor:middle; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <button id="expand" data-tip="Expand all" aria-label="Expand all"><svg viewBox="0 0 16 16"><path d="M6 3L1.5 8 6 13M10 3l4.5 5-4.5 5"/></svg></button>
+  <button id="collapse" data-tip="Collapse all" aria-label="Collapse all"><svg viewBox="0 0 16 16"><path d="M2 3l4.5 5L2 13M14 3L9.5 8l4.5 5"/></svg></button>
+  <span id="count"></span>
+  <button id="fit" data-tip="Reset view" aria-label="Reset view"><svg viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4"/><circle cx="8" cy="8" r="1.5"/></svg></button>
+  <input id="search" placeholder="Search (Enter)">
+  <span class="legend">
+    <span><i class="dot" style="background:#e5534b"></i>conflict</span>
+    <span><i class="dot" style="background:#9aa0a6"></i>duplicate/omitted</span>
+    <span><i class="dot" style="background:#3fb950"></i>test</span>
+    <span><i class="dot" style="background:#d29922"></i>provided/runtime</span>
+  </span>
+</div>
+<svg id="svg"><g id="root"></g></svg>
+
+<script>
+  /*NAV*/
+  const DARK = /*DARK*/false;
+  const DATA = /*DATA*/null;
+  if (DARK) document.documentElement.classList.add('dark');
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const NW = 270, NH = 26, GX = 320, GY = 36;
+  const svg = document.getElementById('svg'), g = document.getElementById('root');
+  let tx = 20, ty = 20, k = 1, uid = 0, matches = new Set(), searching = false;
+
+  const DEFAULT_DEPTH = 2;      // levels shown initially (1 = direct dependencies only)
+  let total = 0;
+
+  function init(n, d) {
+    n.id = ++uid; n.depth = d; n.open = d < DEFAULT_DEPTH;
+    total++;
+    n.children.forEach(c => init(c, d + 1));
+  }
+  init(DATA, 0);
+
+  function setDepth(d) {
+    (function walk(n) { n.open = n.depth < d; n.children.forEach(walk); })(DATA);
+    render();
+  }
+
+  function layout() {
+    let leaf = 0;
+    (function walk(n) {
+      const kids = n.open ? n.children : [];
+      if (!kids.length) n.y = leaf++ * GY;
+      else { kids.forEach(walk); n.y = (kids[0].y + kids[kids.length - 1].y) / 2; }
+      n.x = n.depth * GX;
+    })(DATA);
+  }
+
+  function el(name, attrs, parent) {
+    const e = document.createElementNS(NS, name);
+    for (const a in attrs) e.setAttribute(a, attrs[a]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  function fill(n) {
+    if (n.state === 'CONFLICT') return '#e5534b';
+    if (n.state === 'DUPLICATE' || n.state === 'EXCLUDED') return '#9aa0a6';
+    if (n.scope === 'test') return '#3fb950';
+    if (n.scope === 'provided' || n.scope === 'runtime') return '#d29922';
+    return null;
+  }
+
+  function render() {
+    layout();
+    g.setAttribute('transform', `translate(${tx},${ty}) scale(${k})`);
+    g.textContent = '';
+    let visible = 0;
+    const linkLayer = el('g', {}, g), nodeLayer = el('g', {}, g);
+    (function draw(n) {
+      if (n.open) n.children.forEach(c => {
+        const x1 = n.x + NW, y1 = n.y + NH / 2, x2 = c.x, y2 = c.y + NH / 2, mx = (x1 + x2) / 2;
+        el('path', { class: 'link', d: `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}` }, linkLayer);
+        draw(c);
+      });
+      drawNode(n, nodeLayer);
+      visible++;
+    })(DATA);
+    document.getElementById('count').textContent = `${visible} of ${total} nodes shown` +
+      (searching ? `, ${matches.size} ${matches.size === 1 ? 'match' : 'matches'}` : '');
+  }
+
+  function drawNode(n, layer) {
+    const grp = el('g', { class: 'node' + (matches.has(n.id) ? ' match' : ''),
+                          transform: `translate(${n.x},${n.y})` }, layer);
+    const rect = el('rect', { class: 'box', width: NW, height: NH }, grp);
+    const f = fill(n);
+    if (f) { rect.style.stroke = f; el('rect', { width: 5, height: NH, rx: 2, style: `fill:${f};stroke:none` }, grp); }
+    if (n.state === 'EXCLUDED' || n.state === 'DUPLICATE') rect.setAttribute('stroke-dasharray', '4 3');
+
+    const label = n.name.length > 40 ? n.name.slice(0, 39) + '…' : n.name;
+    const t = el('text', { x: 12, y: NH / 2 + 4 }, grp);
+    t.textContent = label;
+
+    const tip = el('title', {}, grp);
+    tip.textContent = n.nav
+      ? `${n.name}\nscope: ${n.scope}   state: ${n.state}\n` +
+        (n.transitive ? `transitive – click opens the POM of ${n.by} that declares it` : 'click to open in POM')
+      : n.name;
+
+    grp.addEventListener('click', ev => { if (!moved && n.nav) window.nav(n.nav); });
+
+    if (n.children.length) {
+      const tg = el('g', { class: 'toggle', transform: `translate(${NW + 0},${NH / 2})` }, grp);
+      el('circle', { r: 8 }, tg);
+      const s = el('text', { y: 4 }, tg);
+      s.textContent = n.open ? '–' : '+' ;
+      tg.addEventListener('click', ev => { ev.stopPropagation(); if (moved) return; n.open = !n.open; render(); });
+    }
+  }
+
+  document.getElementById('expand').onclick = () => setDepth(Infinity);
+  document.getElementById('collapse').onclick = () => setDepth(1);
+  document.getElementById('fit').onclick = () => { tx = 20; ty = 20; k = 1; render(); };
+
+  document.getElementById('search').addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter') return;
+    const q = ev.target.value.trim().toLowerCase();
+    matches = new Set();
+    searching = q !== '';
+    let first = null;
+    if (q) (function walk(n, path) {
+      const hit = n.name.toLowerCase().includes(q);
+      if (hit) { first = first || n; matches.add(n.id); path.forEach(p => p.open = true); }
+      n.children.forEach(c => walk(c, path.concat(n)));
+    })(DATA, []);
+    render();
+    if (first) reveal(first);
+  });
+
+  // Pans to a node only if it is off-screen, so a match is never highlighted out of sight
+  function reveal(n) {
+    const r = svg.getBoundingClientRect(), x = n.x * k + tx, y = n.y * k + ty;
+    if (x >= 0 && y >= 0 && x + NW * k <= r.width && y + NH * k <= r.height) return;
+    tx = r.width / 2 - (n.x + NW / 2) * k;
+    ty = r.height / 2 - (n.y + NH / 2) * k;
+    g.setAttribute('transform', `translate(${tx},${ty}) scale(${k})`);
+  }
+
+  // pan & zoom
+  let moved = false, dragging = false, sx = 0, sy = 0;
+  svg.addEventListener('mousedown', e => { dragging = true; moved = false; sx = e.clientX; sy = e.clientY; });
+  window.addEventListener('mouseup', () => { dragging = false; svg.classList.remove('drag'); setTimeout(() => moved = false, 0); });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+    if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; svg.classList.add('drag'); }
+    if (moved) { tx += dx; ty += dy; sx = e.clientX; sy = e.clientY;
+                 g.setAttribute('transform', `translate(${tx},${ty}) scale(${k})`); }
+  });
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = svg.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    const nk = Math.min(3, Math.max(0.2, k * (e.deltaY < 0 ? 1.1 : 0.9)));
+    tx = px - (px - tx) * nk / k; ty = py - (py - ty) * nk / k; k = nk;
+    g.setAttribute('transform', `translate(${tx},${ty}) scale(${k})`);
+  }, { passive: false });
+
+  render();
+</script>
+</body>
+</html>

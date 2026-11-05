@@ -1,0 +1,69 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij.platform' version '2.16.0'
+}
+
+group = 'com.dush'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
+
+// No toolchain: compile with whichever JDK Gradle itself runs on (21 or newer, because the
+// 2026.1 platform classes on the compile classpath are Java 21 class files).
+// The output must still be Java 11 bytecode: IDE 2021.3 runs on a Java 11 runtime.
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+processResources {
+    from('LICENSE') { into 'META-INF' }   // ship the licence inside the plugin jar
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 11   // also rejects JDK APIs newer than 11
+}
+
+dependencies {
+    intellijPlatform {
+        // Compile against the newest platform and rely on verifyPlugin (below) for older ones:
+        // this Gradle plugin cannot compile against anything older than 2022.3.
+        // Since 2025.3 IntelliJ IDEA is a single unified distribution, so intellijIdeaCommunity no longer applies.
+        // A plugin built against it runs in both the free and the paid edition.
+        intellijIdea('2026.1')
+        bundledPlugin('org.jetbrains.idea.maven')
+        // 2026.1: MavenId and other model classes now live in this plugin and are no longer pulled in implicitly
+        bundledPlugin('org.jetbrains.idea.reposearch')
+        pluginVerifier()
+    }
+}
+
+intellijPlatform {
+    // Skips the :instrumentCode task (only needed for .form GUI files and some nullability annotations; this plugin uses neither)
+    instrumentCode = false
+
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = '213'          // 2021.3
+            untilBuild = provider { null }   // no upper limit
+        }
+    }
+
+    // ./gradlew verifyPlugin checks the built plugin's bytecode against each of these IDEs.
+    // The compiler only sees 2026.1, so run this after any change to the IntelliJ APIs used.
+    pluginVerification {
+        ides {
+            create('IC', '2021.3')
+            create('IC', '2022.3')
+            create('IC', '2023.3')
+            create('IC', '2024.3')
+            create('IC', '2025.2')      // last separate Community release
+            create('IU', '2026.1')
+        }
+    }
+}
