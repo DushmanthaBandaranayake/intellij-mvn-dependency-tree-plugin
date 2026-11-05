@@ -2,9 +2,13 @@
     <id>com.dush.deptree</id>
     <name>Maven Dependency Tree Graph</name>
     <vendor email="dushmanthab99@gmail.com">Dushmantha Bandaranayake</vendor>
-    <description>Right-click a pom.xml and choose "Dependency Tree" to see a collapsible graphical
-        dependency tree. Click a node to jump to its declaration in the POM.
-        Free to use under the MIT License. Copyright (c) 2026 Dushmantha Bandaranayake.</description>
+    <description><![CDATA[
+        <p>Right-click a pom.xml and choose "Dependency Tree" to see a collapsible graphical
+        dependency tree. Click a node to jump to its declaration in the POM.</p>
+        <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/01-open-dependency-tree.gif" width="600" alt="Opening the dependency tree from a pom.xml"></p>
+        <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/02-expand-and-collapse.gif" width="600" alt="Expanding and collapsing the dependency tree"></p>
+        <p>Free to use under the MIT License. Copyright (c) 2026 Dushmantha Bandaranayake.</p>
+    ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.idea.maven</depends>

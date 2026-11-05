@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.dush'
-version = '1.0.0'
+version = '1.1.0'
 
 repositories {
     mavenCentral()
@@ -65,5 +65,11 @@ intellijPlatform {
             create('IC', '2025.2')      // last separate Community release
             create('IU', '2026.1')
         }
+    }
+
+    // ./gradlew publishPlugin uploads to JetBrains Marketplace. Keep the token out of this file:
+    // the repository is public, so pass it through the PUBLISH_TOKEN environment variable.
+    publishing {
+        token = providers.environmentVariable('PUBLISH_TOKEN')
     }
 }
