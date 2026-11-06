@@ -19,6 +19,9 @@
         <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/04-jump-to-pom.gif" width="600" alt="Jumping to the POM and using the path bar"></p>
         <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/05-version-conflicts.gif" width="600" alt="Opening the Conflicts panel"></p>
         <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/06-copy-and-export.gif" width="600" alt="Copying the tree as text and exporting an image"></p>
+        <p>Please share your suggestions and issues on
+        <a href="https://github.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/issues">GitHub</a>
+        or by email at <a href="mailto:dushmanthab99@gmail.com">dushmanthab99@gmail.com</a>.</p>
         <p>Free to use under the MIT License. Copyright (c) 2026 Dushmantha Bandaranayake.</p>
     ]]></description>
 
