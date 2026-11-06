@@ -24,6 +24,26 @@ final class TreeJson {
         return sb.toString();
     }
 
+    /** The tree below one dependency, for a POM opened from the local repository. */
+    static String build(MavenArtifactNode node, MavenProject resolvedIn) {
+        MavenArtifact a = node.getArtifact();
+        String key = a.getGroupId() + ":" + a.getArtifactId();
+
+        MavenArtifactNode top = node;
+        while (top.getParent() != null) top = top.getParent();
+        MavenArtifact direct = top.getArtifact();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"name\":").append(str(key + ":" + a.getVersion()))
+                .append(",\"scope\":\"root\",\"state\":\"ADDED\",\"ga\":").append(str(key))
+                .append(",\"ver\":").append(str(String.valueOf(a.getVersion())))
+                .append(",\"context\":").append(str("Versions as resolved in " + resolvedIn.getDisplayName()))
+                .append(",\"nav\":null,\"children\":[");
+        appendNodes(sb, node.getDependencies(), direct.getGroupId() + ":" + direct.getArtifactId(), a);
+        sb.append("]}");
+        return sb.toString();
+    }
+
     /**
      * nav encoding (read by PomNavigator):
      *   direct:      D|group:artifact
@@ -52,6 +72,12 @@ final class TreeJson {
             sb.append("{\"name\":").append(str(key + ":" + a.getVersion()))
                     .append(",\"scope\":").append(str(String.valueOf(a.getScope())))
                     .append(",\"state\":").append(str(String.valueOf(n.getState())))
+                    .append(",\"ga\":").append(str(key))
+                    .append(",\"ver\":").append(str(String.valueOf(a.getVersion())))
+                    // For an omitted node, the artifact Maven chose instead (read by the Conflicts panel)
+                    .append(",\"related\":").append(strOrNull(n.getRelatedArtifact() == null ? null : n.getRelatedArtifact().getVersion()))
+                    // The version before <dependencyManagement> changed it, if it did
+                    .append(",\"managedFrom\":").append(strOrNull(n.getPremanagedVersion()))
                     .append(",\"transitive\":").append(transitive)
                     .append(",\"by\":").append(str(by))
                     .append(",\"nav\":").append(str(nav))
@@ -62,10 +88,19 @@ final class TreeJson {
     }
 
     /** The .pom sits next to the artifact's jar in the local repository. */
-    private static String pomPath(MavenArtifact a) {
+    static File pomFile(MavenArtifact a) {
         File f = a.getFile();
-        if (f == null || f.getParentFile() == null) return "";
-        return new File(f.getParentFile(), a.getArtifactId() + "-" + a.getVersion() + ".pom").getPath();
+        if (f == null || f.getParentFile() == null) return null;
+        return new File(f.getParentFile(), a.getArtifactId() + "-" + a.getVersion() + ".pom");
+    }
+
+    private static String pomPath(MavenArtifact a) {
+        File f = pomFile(a);
+        return f == null ? "" : f.getPath();
+    }
+
+    private static String strOrNull(String s) {
+        return s == null ? "null" : str(s);
     }
 
     private static String str(String s) {

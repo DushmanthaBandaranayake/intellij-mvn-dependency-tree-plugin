@@ -5,8 +5,19 @@
     <description><![CDATA[
         <p>Right-click a pom.xml and choose "Dependency Tree" to see a collapsible graphical
         dependency tree. Click a node to jump to its declaration in the POM.</p>
+        <ul>
+            <li>See how a dependency got into your project in the path bar</li>
+            <li>See version conflicts: what was used, what was omitted, and what requested it</li>
+            <li>Search, expand, collapse and fit the graph to the window</li>
+            <li>Copy the tree as text or export it as a PNG image</li>
+            <li>Reload the graph from your POM with one click</li>
+            <li>Open the tree of a dependency's .pom file from your local Maven repository</li>
+        </ul>
         <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/01-open-dependency-tree.gif" width="600" alt="Opening the dependency tree from a pom.xml"></p>
         <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/02-expand-and-collapse.gif" width="600" alt="Expanding and collapsing the dependency tree"></p>
+        <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/04-jump-to-pom.gif" width="600" alt="Jumping to the POM and using the path bar"></p>
+        <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/05-version-conflicts.gif" width="600" alt="Opening the Conflicts panel"></p>
+        <p><img src="https://raw.githubusercontent.com/DushmanthaBandaranayake/intellij-mvn-dependency-tree-plugin/main/docs/images/06-copy-and-export.gif" width="600" alt="Copying the tree as text and exporting an image"></p>
         <p>Free to use under the MIT License. Copyright (c) 2026 Dushmantha Bandaranayake.</p>
     ]]></description>
 
