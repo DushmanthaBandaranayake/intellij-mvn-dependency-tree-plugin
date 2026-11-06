@@ -2,6 +2,8 @@
 
 A free IntelliJ IDEA plugin that shows a Maven project's dependencies as an interactive, collapsible graph. Right-click a `pom.xml` to see the full tree, spot version conflicts, and jump straight to where a dependency is declared.
 
+You can download it from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/35815-maven-dependency-tree-graph).
+
 ![Opening the dependency tree from a pom.xml](docs/images/01-open-dependency-tree.gif)
 
 > The animations in this README are illustrations of the workflow, not recordings. The real IDE window will look a little different.
