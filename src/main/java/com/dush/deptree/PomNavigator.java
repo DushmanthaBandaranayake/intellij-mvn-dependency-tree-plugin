@@ -2,6 +2,8 @@ package com.dush.deptree;
 
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
@@ -18,7 +20,8 @@ import org.jetbrains.idea.maven.project.MavenProjectsManager;
 import java.io.File;
 
 /**
- * Opens the POM block where a dependency is declared. Must be called on the EDT.
+ * Opens the POM block where a dependency is declared. Must be called on a background thread, because
+ * finding the POM reads files and indexes, which the IDE doesn't allow on the EDT. The editor opens on the EDT.
  *
  * @author Dushmantha Bandaranayake
  */
@@ -52,11 +55,7 @@ final class PomNavigator {
         MavenProjectsManager manager = MavenProjectsManager.getInstance(project);
         MavenProject current = start;
         for (int guard = 0; current != null && guard < 20; guard++) {
-            XmlTag tag = findDependencyTag(project, current.getFile(), ga[0], ga[1]);
-            if (tag != null) {
-                open(project, tag);
-                return;
-            }
+            if (openDependency(project, current.getFile(), ga[0], ga[1])) return;
             MavenId parentId = current.getParentId();
             current = parentId == null ? null : manager.findProject(parentId);
         }
@@ -75,12 +74,10 @@ final class PomNavigator {
             VirtualFile vf = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(current);
             if (vf == null) return false;
 
-            XmlTag tag = findDependencyTag(project, vf, ga[0], ga[1]);
-            if (tag != null) {
-                open(project, tag);
-                return true;
-            }
-            current = parentPomOf(project, vf, current);   // declared in an inherited parent POM?
+            if (openDependency(project, vf, ga[0], ga[1])) return true;
+
+            File pomFile = current;
+            current = ReadAction.compute(() -> parentPomOf(project, vf, pomFile));   // declared in an inherited parent POM?
         }
         return false;
     }
@@ -137,9 +134,18 @@ final class PomNavigator {
         return fallback;
     }
 
-    private static void open(Project project, XmlTag tag) {
-        new OpenFileDescriptor(project, tag.getContainingFile().getVirtualFile(),
-                tag.getTextRange().getStartOffset()).navigate(true);
+    /** Finds the dependency under a read lock, then opens it on the EDT. Returns false if the POM doesn't declare it. */
+    private static boolean openDependency(Project project, VirtualFile pom, String groupId, String artifactId) {
+        OpenFileDescriptor target = ReadAction.compute(() -> {
+            XmlTag tag = findDependencyTag(project, pom, groupId, artifactId);
+            return tag == null ? null : new OpenFileDescriptor(project, tag.getContainingFile().getVirtualFile(),
+                    tag.getTextRange().getStartOffset());
+        });
+        if (target == null) return false;
+        ApplicationManager.getApplication().invokeLater(() -> {
+            if (!project.isDisposed()) target.navigate(true);
+        });
+        return true;
     }
 
     private static String text(XmlTag parent, String child) {

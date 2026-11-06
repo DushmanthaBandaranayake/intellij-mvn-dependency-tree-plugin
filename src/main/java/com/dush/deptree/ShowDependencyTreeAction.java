@@ -101,7 +101,16 @@ public class ShowDependencyTreeAction extends AnAction implements DumbAware, Upd
         ToolWindow toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID);
         if (toolWindow == null) return;
 
-        DependencyTreePanel panel = new DependencyTreePanel(project, mavenProject, treeSource, title);
+        DependencyTreePanel panel;
+        try {
+            panel = new DependencyTreePanel(project, mavenProject, treeSource, title);
+        } catch (NoClassDefFoundError missingBrowser) {
+            Messages.showErrorDialog(project,
+                    "The graph needs IntelliJ's embedded browser, which isn't available.\n"
+                    + "In Settings > Plugins, enable or install \"Web Browser (JCEF)\", then restart the IDE.",
+                    "Dependency Tree");
+            return;
+        }
         // Service lookup rather than ContentFactory.getInstance(), which is missing from older platforms
         Content content = ApplicationManager.getApplication().getService(ContentFactory.class)
                 .createContent(panel.getComponent(), title, false);

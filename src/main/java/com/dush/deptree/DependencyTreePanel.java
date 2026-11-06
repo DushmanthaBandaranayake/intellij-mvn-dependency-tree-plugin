@@ -65,7 +65,7 @@ final class DependencyTreePanel implements Disposable {
         Disposer.register(this, query);
 
         query.addHandler(key -> {
-            ApplicationManager.getApplication().invokeLater(
+            ApplicationManager.getApplication().executeOnPooledThread(
                     () -> PomNavigator.navigateTo(project, mavenProject, key));
             return null;
         });

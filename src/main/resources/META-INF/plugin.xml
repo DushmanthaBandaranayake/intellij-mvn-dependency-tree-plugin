@@ -1,4 +1,5 @@
-<idea-plugin>
+<!-- require-restart: unloading live can leave the plugin referenced in memory, which delays or hangs uninstalling -->
+<idea-plugin require-restart="true">
     <id>com.dush.deptree</id>
     <name>Maven Dependency Tree Graph</name>
     <vendor email="dushmanthab99@gmail.com">Dushmantha Bandaranayake</vendor>
@@ -24,6 +25,8 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.idea.maven</depends>
     <depends>org.jetbrains.idea.reposearch</depends>
+    <!-- Since 2026.2 the embedded browser classes are in this separate plugin. Optional, because older IDEs have them in the core. -->
+    <depends optional="true" config-file="deptree-jcef.xml">com.intellij.modules.jcef</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup id="Dependency Tree" displayType="BALLOON"/>
